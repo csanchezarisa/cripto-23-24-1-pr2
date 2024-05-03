@@ -191,7 +191,9 @@ def uoc_add_round_key(state, key):
  
     for i in range(0, len(state)):
         for j in range(0, len(state[i])):
+            # Get sub-key from the original key
             sub_key = key[i * 4 + j]
+            # xor operation and saves in state
             state[i][j] ^= sub_key
 
     # --------------------------------
@@ -207,10 +209,12 @@ def uoc_byte_sub(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
+    # Select the s_box value depending on the inverse
     s_box = S_BOX if not inverse else INV_S_BOX
 
     for i in range(0, len(state)):
         for j in range(0, len(state[i])):
+            # Get the value from the selected s_box
             state[i][j] = s_box[state[i][j] % len(s_box)]
 
     # --------------------------------
@@ -226,11 +230,14 @@ def uoc_shift_row(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
+    # Deepclone the state list
     old_state: list[list] = clone_list(state)
 
     for i in range(0, len(old_state)):
         for j in range(1, len(old_state[i])):
+            # Calculate the new 'i' position depending on the inverse param
             new_pos = ((i - j) % 4) if not inverse else ((i + j) % 4)
+            # Move the values
             state[new_pos][j] = old_state[i][j]
 
     # --------------------------------
@@ -285,9 +292,8 @@ def uoc_aes_genkey():
 
     # --- IMPLEMENTATION GOES HERE ---
 
-
-
-
+    # Generates a random key of 16 bytes using os.urandom function
+    key = os.urandom(16)
 
     # --------------------------------
 
