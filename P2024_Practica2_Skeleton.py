@@ -159,8 +159,19 @@ import sys
 
 # --- IMPLEMENTATION GOES HERE -----------------------------------------------
 #  Student helpers (functions, constants, etc.) can be defined here, if needed
+def clone_list(x: list[list]) -> list[list]:
+    """
+    Deep clones a list into a new one
+    :param x: List to be deep-cloned
+    :return: new list with the same values
+    """
+    new_list: list[list] = []
+    for i in range(len(x)):
+        new_list.append([])
+        for v in x[i]:
+            new_list[i].append(v)
 
-
+    return new_list
 
 
 # ----------------------------------------------------------------------------
@@ -178,7 +189,10 @@ def uoc_add_round_key(state, key):
 
     #### IMPLEMENTATION GOES HERE ####
  
-
+    for i in range(0, len(state)):
+        for j in range(0, len(state[i])):
+            sub_key = key[i * 4 + j]
+            state[i][j] ^= sub_key
 
     # --------------------------------
 
@@ -193,8 +207,11 @@ def uoc_byte_sub(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
- 
+    s_box = S_BOX if not inverse else INV_S_BOX
 
+    for i in range(0, len(state)):
+        for j in range(0, len(state[i])):
+            state[i][j] = s_box[state[i][j] % len(s_box)]
 
     # --------------------------------
 
@@ -209,7 +226,12 @@ def uoc_shift_row(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
- 
+    old_state: list[list] = clone_list(state)
+
+    for i in range(0, len(old_state)):
+        for j in range(1, len(old_state[i])):
+            new_pos = ((i - j) % 4) if not inverse else ((i + j) % 4)
+            state[new_pos][j] = old_state[i][j]
 
     # --------------------------------
 
