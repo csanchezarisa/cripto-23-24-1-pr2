@@ -174,6 +174,19 @@ def clone_list(x: list[list]) -> list[list]:
     return new_list
 
 
+def xor_r_con(temp: list[bytes], i: int, nk: int) -> list[bytes]:
+    """
+    It applies XOR operation to the first element of the word with R_CON value
+    :param temp: temporal word represented as a list of bytes
+    :param i: iteration number
+    :param nk: size of words
+    :return: the temporal word modified by applying XOR operation with R_CON value
+    """
+    temp[0] ^= R_CON[i // nk]
+
+    return temp
+
+
 # ----------------------------------------------------------------------------
 
 
@@ -312,6 +325,36 @@ def uoc_expand_key(key):
 
     #### IMPLEMENTATION GOES HERE ####
 
+    nk: int = 4
+    nr: int = 10
+
+    words = []
+
+    # First 4 Words added to the subkey
+    for i in range(nk):
+        words.append(list(key[i * 4:i * 4 + 4]))
+
+    for i in range(4, 4 * (nr + 1)):
+        temp = words[i - 1]
+
+        if i % nk == 0:
+            # RotWord function
+            temp = temp[1:] + temp[:1]
+
+            # SubWord function
+            temp = uoc_byte_sub([temp])[0]
+
+            # XOR with R_CON
+            temp = xor_r_con(temp, i, nk)
+
+        # XOR with the first unused word
+        temp = [words[i - nk][k] ^ temp[k] for k in range(len(temp))]
+
+        words.append(temp)
+
+    # Group each word into a 4-words word
+    for i in range(len(words) // 4):
+        subkeys.append(bytes(words[i * 4] + words[i * 4 + 1] + words[i * 4 + 2] + words[i * 4 + 3]))
 
     # --------------------------------
 
@@ -334,7 +377,12 @@ def uoc_aes_cbc_cipher(message, key, iv):
     ciphertext = b""
 
     #### IMPLEMENTATION GOES HERE ####
- 
+    for i in range(len(message) // 16):
+        state = []
+        for j in range(4):
+            state.append(list(key[j * 4:j * 4 + 4]))
+        state = uoc_add_round_key(state, key)
+
 
 
     # --------------------------------
