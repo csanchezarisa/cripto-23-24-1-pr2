@@ -417,7 +417,7 @@ def uoc_aes_cbc_cipher(message, key, iv):
         state = uoc_add_round_key(state, expand_keys[0])
 
         ##### 2. Standard transformation -> Using expanded keys from 1 to 9 #####
-        for j in range(1, len(expand_keys)):
+        for j in range(1, len(expand_keys) - 1):
             # Apply ByteSub
             state = uoc_byte_sub(state)
 
@@ -510,10 +510,3 @@ def uoc_aes_cbc_decipher(message, key, iv):
     # --------------------------------
 
     return plaintext
-
-
-
-
-
-
-
