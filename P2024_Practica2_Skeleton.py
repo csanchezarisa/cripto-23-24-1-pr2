@@ -174,18 +174,39 @@ def clone_list(x: list[list]) -> list[list]:
     return new_list
 
 
-def xor_r_con(temp: list[bytes], i: int, nk: int) -> list[bytes]:
+def apply_xor(first: list[int], second: list[int]) -> list[int]:
     """
-    It applies XOR operation to the first element of the word with R_CON value
-    :param temp: temporal word represented as a list of bytes
-    :param i: iteration number
-    :param nk: size of words
-    :return: the temporal word modified by applying XOR operation with R_CON value
+
+    :param first:
+    :param second:
+    :return:
     """
-    temp[0] ^= R_CON[i // nk]
+    if len(first) != len(second):
+        raise Exception('Lists must contain the same number of elements')
 
-    return temp
+    return [first[i] ^ second[i] for i in range(len(first))]
 
+
+def convert_to_4x4_matrix(text: bytes) -> list[list[int]]:
+    """
+    Converts a bytes text into a 4x4 matrix
+    :param text:
+    :return:
+    """
+    if len(text) > 16:
+        raise Exception("Invalid size")
+
+    return [list(text[i * 4:i * 4 + 4]) for i in range(4)]
+
+
+
+def group_in_4_words_word(words: list[list[int]]) -> list[bytes]:
+    """
+
+    :param words:
+    :return:
+    """
+    return [bytes(words[i * 4] + words[i * 4 + 1] + words[i * 4 + 2] + words[i * 4 + 3]) for i in range(len(words) // 4)]
 
 # ----------------------------------------------------------------------------
 
@@ -330,10 +351,11 @@ def uoc_expand_key(key):
 
     words = []
 
+    # Init phase
     # First 4 Words added to the subkey
-    for i in range(nk):
-        words.append(list(key[i * 4:i * 4 + 4]))
+    words.extend(convert_to_4x4_matrix(key))
 
+    # Expansion phase
     for i in range(4, 4 * (nr + 1)):
         temp = words[i - 1]
 
@@ -345,16 +367,15 @@ def uoc_expand_key(key):
             temp = uoc_byte_sub([temp])[0]
 
             # XOR with R_CON
-            temp = xor_r_con(temp, i, nk)
+            temp[0] ^= R_CON[i // nk]
 
         # XOR with the first unused word
-        temp = [words[i - nk][k] ^ temp[k] for k in range(len(temp))]
+        temp = apply_xor(words[i - nk], temp)
 
         words.append(temp)
 
     # Group each word into a 4-words word
-    for i in range(len(words) // 4):
-        subkeys.append(bytes(words[i * 4] + words[i * 4 + 1] + words[i * 4 + 2] + words[i * 4 + 3]))
+    subkeys.extend(group_in_4_words_word(words))
 
     # --------------------------------
 
@@ -377,12 +398,50 @@ def uoc_aes_cbc_cipher(message, key, iv):
     ciphertext = b""
 
     #### IMPLEMENTATION GOES HERE ####
-    for i in range(len(message) // 16):
-        state = []
-        for j in range(4):
-            state.append(list(key[j * 4:j * 4 + 4]))
-        state = uoc_add_round_key(state, key)
 
+    # Generate expand keys
+    expand_keys: list[bytes] = uoc_expand_key(key)
+
+    for i in range(len(message) // 16):
+        # Get the block to be processed
+        s_message = message[i * 16:i * 16 + 16]
+
+        ##### 1. Initial transformation #####
+        # Message converted to a 4x4 matrix called 'state'
+        state = convert_to_4x4_matrix(s_message)
+
+        # XOR operation with IV
+        state = uoc_add_round_key(state, iv)
+
+        # Apply AddRoundKey -> Using initial key
+        state = uoc_add_round_key(state, expand_keys[0])
+
+        ##### 2. Standard transformation -> Using expanded keys from 1 to 9 #####
+        for j in range(1, len(expand_keys)):
+            # Apply ByteSub
+            state = uoc_byte_sub(state)
+
+            # Apply ShiftRow
+            state = uoc_shift_row(state)
+
+            # Apply MixColumn
+            state = uoc_mix_columns(state)
+
+            # Apply AddRoundKey
+            state = uoc_add_round_key(state, expand_keys[j])
+
+        ##### 3. Final transformation -> Using the last expand key 10 #####
+        # Apply ByteSub
+        state = uoc_byte_sub(state)
+
+        # Apply ShiftRow
+        state = uoc_shift_row(state)
+
+        # Apply AddRoundKey
+        state = uoc_add_round_key(state, expand_keys[10])
+
+        iv = group_in_4_words_word(state)[0]
+        ciphertext += iv
 
 
     # --------------------------------
@@ -404,7 +463,49 @@ def uoc_aes_cbc_decipher(message, key, iv):
 
     #### IMPLEMENTATION GOES HERE ####
 
+    # Generate expand keys
+    expand_keys: list[bytes] = uoc_expand_key(key)
 
+    for i in range(len(message) // 16):
+        # Get the block to be processed
+        s_message = message[i * 16:i * 16 + 16]
+
+        ##### 1. Final transformation #####
+        # Message converted to a 4x4 matrix called 'state'
+        state = convert_to_4x4_matrix(s_message)
+
+        # Apply AddRoundKey
+        state = uoc_add_round_key(state, expand_keys[10])
+
+        # Apply ShiftRow
+        state = uoc_shift_row(state, True)
+
+        # Apply ByteSub
+        state = uoc_byte_sub(state, True)
+
+        ##### 2. Standard itareation #####
+        for j in range(9, 0, -1):
+            # Apply AddRoundKey
+            state = uoc_add_round_key(state, expand_keys[j])
+
+            # Apply MixColumns
+            state = uoc_mix_columns(state, True)
+
+            # Apply ShiftRow
+            state = uoc_shift_row(state, True)
+
+            # Apply ByteSub
+            state = uoc_byte_sub(state, True)
+
+        ##### 3. Initial transformation #####
+        # Apply AddRoundKey
+        state = uoc_add_round_key(state, expand_keys[0])
+
+        # Apply XOR operation with IV
+        state = uoc_add_round_key(state, iv)
+
+        iv = s_message
+        plaintext += group_in_4_words_word(state)[0]
 
     # --------------------------------
 
