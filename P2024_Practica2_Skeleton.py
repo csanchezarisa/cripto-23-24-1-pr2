@@ -334,7 +334,7 @@ def uoc_expand_key(key):
     nk: int = 4
     nr: int = 10
 
-    words = []
+    words: list[list[int]] = []
 
     # Init phase
     # First 4 Words added to the subkey
@@ -386,11 +386,11 @@ def uoc_aes_cbc_cipher(message, key, iv):
 
     for i in range(len(message) // 16):
         # Get the block to be processed
-        s_message = message[i * 16:i * 16 + 16]
+        s_message: bytes = message[i * 16:i * 16 + 16]
 
         ##### 1. Initial transformation #####
         # Message converted to a 4x4 matrix called 'state'
-        state = convert_to_4x4_matrix(s_message)
+        state: list[list[int]] = convert_to_4x4_matrix(s_message)
 
         # XOR operation with IV
         state = uoc_add_round_key(state, iv)
@@ -425,7 +425,6 @@ def uoc_aes_cbc_cipher(message, key, iv):
         iv = group_in_4_words_word(state)[0]
         ciphertext += iv
 
-
     # --------------------------------
 
     return ciphertext
@@ -450,11 +449,11 @@ def uoc_aes_cbc_decipher(message, key, iv):
 
     for i in range(len(message) // 16):
         # Get the block to be processed
-        s_message = message[i * 16:i * 16 + 16]
+        s_message: bytes = message[i * 16:i * 16 + 16]
 
         ##### 1. Final transformation #####
         # Message converted to a 4x4 matrix called 'state'
-        state = convert_to_4x4_matrix(s_message)
+        state: list[list[int]] = convert_to_4x4_matrix(s_message)
 
         # Apply AddRoundKey
         state = uoc_add_round_key(state, expand_keys[10])
