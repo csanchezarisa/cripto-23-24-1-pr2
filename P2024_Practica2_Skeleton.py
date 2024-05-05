@@ -174,24 +174,11 @@ def clone_list(x: list[list]) -> list[list]:
     return new_list
 
 
-def apply_xor(first: list[int], second: list[int]) -> list[int]:
-    """
-
-    :param first:
-    :param second:
-    :return:
-    """
-    if len(first) != len(second):
-        raise Exception('Lists must contain the same number of elements')
-
-    return [first[i] ^ second[i] for i in range(len(first))]
-
-
 def convert_to_4x4_matrix(text: bytes) -> list[list[int]]:
     """
     Converts a bytes text into a 4x4 matrix
-    :param text:
-    :return:
+    :param text: text in bytes to be converted into a matrix
+    :return: matrix of 4x4 elements
     """
     if len(text) > 16:
         raise Exception("Invalid size")
@@ -199,12 +186,11 @@ def convert_to_4x4_matrix(text: bytes) -> list[list[int]]:
     return [list(text[i * 4:i * 4 + 4]) for i in range(4)]
 
 
-
 def group_in_4_words_word(words: list[list[int]]) -> list[bytes]:
     """
-
-    :param words:
-    :return:
+    Groups a matrix into a list of 4-words words.
+    :param words: matrix of bytes to be converted
+    :return: list of 4-words words in byte strings
     """
     return [bytes(words[i * 4] + words[i * 4 + 1] + words[i * 4 + 2] + words[i * 4 + 3]) for i in range(len(words) // 4)]
 
@@ -243,6 +229,7 @@ def uoc_byte_sub(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
+
     # Select the s_box value depending on the inverse
     s_box = S_BOX if not inverse else INV_S_BOX
 
@@ -264,7 +251,8 @@ def uoc_shift_row(state, inverse=False):
     """
 
     #### IMPLEMENTATION GOES HERE ####
-    # Deepclone the state list
+
+    # Deepclone state list
     old_state: list[list] = clone_list(state)
 
     for i in range(0, len(old_state)):
@@ -314,8 +302,6 @@ def uoc_mix_columns(state, inverse=False):
     return state
 
 
-
-
 def uoc_aes_genkey():
     """
     EXERCISE 2.1: AES Key Generation
@@ -332,7 +318,6 @@ def uoc_aes_genkey():
     # --------------------------------
 
     return key
-
 
 
 def uoc_expand_key(key):
@@ -370,7 +355,7 @@ def uoc_expand_key(key):
             temp[0] ^= R_CON[i // nk]
 
         # XOR with the first unused word
-        temp = apply_xor(words[i - nk], temp)
+        temp = [words[i - nk][j] ^ temp[j] for j in range(len(temp))]
 
         words.append(temp)
 
@@ -380,9 +365,6 @@ def uoc_expand_key(key):
     # --------------------------------
 
     return subkeys
-
-
-
 
 
 def uoc_aes_cbc_cipher(message, key, iv):
